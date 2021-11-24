@@ -260,10 +260,25 @@ func dataLineToString(dataLine DataLine) (string, error) {
 	rv := reflect.ValueOf(dataLine)
 
 	for i := 0; i < rv.NumField(); i++ {
-		if rv.Field(i).Kind() != reflect.String {
-			result = append(result, "")
+		field := rv.Field(i)
+		val := field.Interface()
+
+		if iif, ok := val.(IIFer); ok {
+			result = append(result, iif.IIF())
+			continue
 		}
-		result = append(result, rv.Field(i).String())
+
+		if s, ok := val.(fmt.Stringer); ok {
+			result = append(result, s.String())
+			continue
+		}
+
+		if field.Kind() == reflect.String {
+			result = append(result, rv.Field(i).String())
+			continue
+		}
+
+		result = append(result, fmt.Sprint(val))
 	}
 
 	return addType(strings.Join(result, tab), t, false), nil
@@ -281,4 +296,8 @@ func addType(line string, t Type, isHeader bool) string {
 		t = "!" + t
 	}
 	return fmt.Sprintf("%s%s%s", t, tab, line)
+}
+
+type IIFer interface {
+	IIF() string
 }
